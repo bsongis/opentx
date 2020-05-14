@@ -483,6 +483,11 @@ void perMain()
   handleJackConnection();
 #endif
 
+#if defined(BLUETOOTH)
+  #warning "Move bluetooth wakeup here, as it writes on SD"
+  // bluetooth.wakeup();
+#endif
+
   checkTrainerSettings();
   periodicTick();
   DEBUG_TIMER_STOP(debugTimerPerMain1);

@@ -122,7 +122,7 @@ extern "C" void BT_USART_IRQHandler(void)
     USART_ClearITPendingBit(BT_USART, USART_IT_RXNE);
     uint8_t byte = USART_ReceiveData(BT_USART);
     btRxFifo.push(byte);
-    TRACE("BT %02X", byte);
+    TRACE_NOCRLF(" %02X", byte);
 #if defined(BLUETOOTH_PROBE)
     if (!btChipPresent) {
       // This is to differentiate X7 and X7S and X-Lite with/without BT
@@ -148,15 +148,13 @@ extern "C" void BT_USART_IRQHandler(void)
 void bluetoothWriteWakeup()
 {
   if (bluetoothWriteState == BLUETOOTH_WRITE_IDLE) {
-    if (!btTxFifo.isEmpty()) {
 #if defined(BT_BRTS_GPIO_PIN)
-      bluetoothWriteState = BLUETOOTH_WRITE_INIT;
-      GPIO_ResetBits(BT_BRTS_GPIO, BT_BRTS_GPIO_PIN);
+    bluetoothWriteState = BLUETOOTH_WRITE_INIT;
+    GPIO_ResetBits(BT_BRTS_GPIO, BT_BRTS_GPIO_PIN);
 #else
-      bluetoothWriteState = BLUETOOTH_WRITING;
-      USART_ITConfig(BT_USART, USART_IT_TXE, ENABLE);
+    bluetoothWriteState = BLUETOOTH_WRITING;
+    USART_ITConfig(BT_USART, USART_IT_TXE, ENABLE);
 #endif
-    }
   }
 #if defined(BT_BRTS_GPIO_PIN)
   else if (bluetoothWriteState == BLUETOOTH_WRITE_INIT) {
@@ -170,7 +168,7 @@ void bluetoothWriteWakeup()
 #endif
 }
 
-uint8_t bluetoothIsWriting(void)
+uint8_t bluetoothIsWriting()
 {
   return bluetoothWriteState != BLUETOOTH_WRITE_IDLE;
 }

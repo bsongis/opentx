@@ -412,16 +412,6 @@ static int luaSportTelemetryPop(lua_State * L)
   return 0;
 }
 
-#define BIT(x, index) (((x) >> index) & 0x01)
-uint8_t getDataId(uint8_t physicalId)
-{
-  uint8_t result = physicalId;
-  result += (BIT(physicalId, 0) ^ BIT(physicalId, 1) ^ BIT(physicalId, 2)) << 5;
-  result += (BIT(physicalId, 2) ^ BIT(physicalId, 3) ^ BIT(physicalId, 4)) << 6;
-  result += (BIT(physicalId, 0) ^ BIT(physicalId, 2) ^ BIT(physicalId, 4)) << 7;
-  return result;
-}
-
 /*luadoc
 @function sportTelemetryPush()
 
@@ -461,52 +451,14 @@ static int luaSportTelemetryPush(lua_State * L)
     return 1;
   }
 
+  uint8_t physicalId = luaL_checkunsigned(L, 1);
+  uint8_t primId = luaL_checkunsigned(L, 2);
   uint16_t dataId = luaL_checkunsigned(L, 3);
+  uint32_t value = luaL_checkunsigned(L, 4);
 
-  if (outputTelemetryBuffer.isAvailable()) {
-    for (uint8_t i=0; i<MAX_TELEMETRY_SENSORS; i++) {
-      TelemetrySensor & sensor = g_model.telemetrySensors[i];
-      if (sensor.id == dataId) {
-        if (sensor.frskyInstance.rxIndex == TELEMETRY_ENDPOINT_SPORT) {
-          SportTelemetryPacket packet;
-          packet.physicalId = getDataId(luaL_checkunsigned(L, 1));
-          packet.primId = luaL_checkunsigned(L, 2);
-          packet.dataId = dataId;
-          packet.value = luaL_checkunsigned(L, 4);
-          outputTelemetryBuffer.pushSportPacketWithBytestuffing(packet);
-        }
-        else {
-          outputTelemetryBuffer.sport.physicalId = getDataId(luaL_checkunsigned(L, 1));
-          outputTelemetryBuffer.sport.primId = luaL_checkunsigned(L, 2);
-          outputTelemetryBuffer.sport.dataId = dataId;
-          outputTelemetryBuffer.sport.value = luaL_checkunsigned(L, 4);
-        }
-        outputTelemetryBuffer.setDestination(sensor.frskyInstance.rxIndex);
-        lua_pushboolean(L, true);
-        return 1;
-      }
-    }
+  bool result = sportPushTelemetry(physicalId, primId, dataId, value);
+  lua_pushboolean(L, result);
 
-    // sensor not found, we send the frame to the SPORT line
-    {
-      SportTelemetryPacket packet;
-      packet.physicalId = getDataId(luaL_checkunsigned(L, 1));
-      packet.primId = luaL_checkunsigned(L, 2);
-      packet.dataId = dataId;
-      packet.value = luaL_checkunsigned(L, 4);
-      outputTelemetryBuffer.pushSportPacketWithBytestuffing(packet);
-#if defined(PXX2)
-      uint8_t destination = (IS_INTERNAL_MODULE_ON() ? INTERNAL_MODULE : EXTERNAL_MODULE);
-      outputTelemetryBuffer.setDestination(isModulePXX2(destination) ? (destination << 2) : TELEMETRY_ENDPOINT_SPORT);
-#else
-      outputTelemetryBuffer.setDestination(TELEMETRY_ENDPOINT_SPORT);
-#endif
-      lua_pushboolean(L, true);
-      return 1;
-    }
-  }
-
-  lua_pushboolean(L, false);
   return 1;
 }
 
@@ -574,7 +526,7 @@ static int luaAccessTelemetryPush(lua_State * L)
       destination = (module << 2) + rxUid;
     }
 
-    outputTelemetryBuffer.sport.physicalId = getDataId(luaL_checkunsigned(L, 3));
+    outputTelemetryBuffer.sport.physicalId = getPhysicalIdWithCrc(luaL_checkunsigned(L, 3));
     outputTelemetryBuffer.sport.primId = luaL_checkunsigned(L, 4);
     outputTelemetryBuffer.sport.dataId = luaL_checkunsigned(L, 5);
     outputTelemetryBuffer.sport.value = luaL_checkunsigned(L, 6);
@@ -1586,23 +1538,24 @@ static int luaSerialWrite(lua_State * L)
   if (!str || len < 1)
     return 0;
 
-#if !defined(SIMU)
-  #if defined(USB_SERIAL)
+#if defined(SIMU)
+  debugPrintf("luaSerialWrite: %.*s", len, str);
+#endif
+
+#if defined(USB_SERIAL)
   if (getSelectedUsbMode() == USB_SERIAL_MODE) {
-    size_t wr_len = len;
-    const char* p = str;
-    while(wr_len--) usbSerialPutc(*p++);
+    const char * p = str;
+    while (len--)
+      usbSerialPutc(*p++);
   }
-  #endif
-  #if defined(AUX_SERIAL)
+#endif
+
+#if defined(AUX_SERIAL)
   if (auxSerialMode == UART_MODE_LUA) {
-    size_t wr_len = len;
-    const char* p = str;
-    while(wr_len--) auxSerialPutc(*p++);
+    const char * p = str;
+    while (len--)
+      auxSerialPutc(*p++);
   }
-  #endif
-#else
-  debugPrintf("luaSerialWrite: %.*s",len,str);
 #endif
 
   return 0;

@@ -18,6 +18,9 @@
  * GNU General Public License for more details.
  */
 
+#ifndef _BLUETOOTH_H_
+#define _BLUETOOTH_H_
+
 enum BluetoothStates {
 #if defined(PCBX9E)
   BLUETOOTH_INIT,
@@ -39,15 +42,22 @@ enum BluetoothStates {
   BLUETOOTH_STATE_BIND_REQUESTED,
   BLUETOOTH_STATE_CONNECT_SENT,
   BLUETOOTH_STATE_CONNECTED,
+  BLUETOOTH_STATE_UPLOAD,
   BLUETOOTH_STATE_DISCONNECTED,
   BLUETOOTH_STATE_CLEAR_REQUESTED,
   BLUETOOTH_STATE_FLASH_FIRMWARE
 };
 
-#define LEN_BLUETOOTH_ADDR              16
-#define MAX_BLUETOOTH_DISTANT_ADDR      6
-#define BLUETOOTH_PACKET_SIZE           14
-#define BLUETOOTH_LINE_LENGTH           32
+constexpr uint8_t LEN_BLUETOOTH_ADDR =         16;
+constexpr uint8_t MAX_BLUETOOTH_DISTANT_ADDR = 6;
+constexpr uint8_t BLUETOOTH_BUFFER_SIZE =      64;
+
+//template <int N>
+//class BluetoothInputBuffer {
+//    uint8_t data[N];
+//    uint8_t size = 0;
+//    uint8_t crc = 0;
+//};
 
 #if defined(LOG_BLUETOOTH)
   #define BLUETOOTH_TRACE(...)  \
@@ -60,12 +70,23 @@ enum BluetoothStates {
 
 class Bluetooth
 {
+  enum FrameType {
+    FRAME_TYPE_SUBSCRIBE = 0x01,
+    FRAME_TYPE_SUBSCRIBE_ACK = 0x80 + FRAME_TYPE_SUBSCRIBE,
+    FRAME_TYPE_UPLOAD = 0x05,
+    FRAME_TYPE_UPLOAD_ACK = 0x80 + FRAME_TYPE_UPLOAD,
+    FRAME_TYPE_DOWNLOAD = 0x06,
+    FRAME_TYPE_DOWNLOAD_ACK = 0x80 + FRAME_TYPE_DOWNLOAD,
+    FRAME_TYPE_CHANNELS = 0x07,
+    FRAME_TYPE_TELEMETRY = 0x08,
+  };
+
   public:
     void writeString(const char * str);
     char * readline(bool error_reset = true);
     void write(const uint8_t * data, uint8_t length);
 
-    void forwardTelemetry(const uint8_t * packet);
+    void sendTelemetryFrame(uint8_t origin, const uint8_t * packet);
     void wakeup();
     const char * flashFirmware(const char * filename);
 
@@ -75,18 +96,27 @@ class Bluetooth
 
   protected:
     void pushByte(uint8_t byte);
-    uint8_t read(uint8_t * data, uint8_t size, uint32_t timeout=1000/*ms*/);
-    void appendTrainerByte(uint8_t data);
-    void processTrainerFrame(const uint8_t * buffer);
-    void processTrainerByte(uint8_t data);
-    void sendTrainer();
-    void receiveTrainer();
+    void startOutputFrame(uint8_t frameType);
+    void endOutputFrame();
+    void sendTrainerFrame();
 
-    uint8_t bootloaderChecksum(uint8_t command, const uint8_t * data, uint8_t size);
+    static uint8_t read(uint8_t * data, uint8_t size, uint32_t timeout=1000/*ms*/);
+    void readFrame();
+    bool processFrameByte(uint8_t byte);
+    bool checkFrame();
+    void processFrame();
+    void processSubscribeFrame();
+    void processChannelsFrame();
+    void processTelemetryFrame();
+    void processUploadFrame();
+    void sendUploadAck();
+    void appendFrameByte(uint8_t byte);
+
+    static uint8_t bootloaderChecksum(uint8_t command, const uint8_t * data, uint8_t size);
     void bootloaderSendCommand(uint8_t command, const void *data = nullptr, uint8_t size = 0);
     void bootloaderSendCommandResponse(uint8_t response);
-    const char * bootloaderWaitCommandResponse(uint32_t timeout=1000/*ms*/);
-    const char * bootloaderWaitResponseData(uint8_t *data, uint8_t size);
+    static const char * bootloaderWaitCommandResponse(uint32_t timeout=1000/*ms*/);
+    static const char * bootloaderWaitResponseData(uint8_t *data, uint8_t size);
     const char * bootloaderSetAutoBaud();
     const char * bootloaderReadStatus(uint8_t &status);
     const char * bootloaderCheckStatus();
@@ -96,10 +126,24 @@ class Bluetooth
     const char * bootloaderWriteFlash(const uint8_t * data, uint32_t size);
     const char * doFlashFirmware(const char * filename);
 
-    uint8_t buffer[BLUETOOTH_LINE_LENGTH+1];
+    PACK(struct {
+      uint8_t channels:1;
+      uint8_t telemetry:1;
+      uint8_t spare:6;
+    }) subscribtion;
+
+    uint8_t buffer[BLUETOOTH_BUFFER_SIZE];
     uint8_t bufferIndex = 0;
-    tmr10ms_t wakeupTime = 0;
     uint8_t crc;
+
+    uint8_t outputCrc;
+    tmr10ms_t wakeupTime = 0;
+    tmr10ms_t lastWriteTime = 0;
+    uint8_t dataState = STATE_DATA_START;
+    FIL file;
+    uint32_t uploadPosition;
 };
 
 extern Bluetooth bluetooth;
+
+#endif // _BLUETOOTH_H_

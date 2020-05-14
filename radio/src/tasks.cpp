@@ -117,6 +117,7 @@ TASK_FUNCTION(mixerTask)
 #endif
 
 #if defined(BLUETOOTH)
+    #warning "Remove bluetooth wakeup here, as it writes on SD"
     bluetooth.wakeup();
 #endif
 
