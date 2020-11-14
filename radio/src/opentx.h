@@ -1010,6 +1010,12 @@ constexpr uint8_t SD_SCREEN_FILE_LENGTH = 32;
 constexpr uint8_t SD_SCREEN_FILE_LENGTH = 64;
 #endif
 
+#if LCD_W > 350
+#define RADIO_TOOL_NAME_MAXLEN  40
+#else
+#define RADIO_TOOL_NAME_MAXLEN  16
+#endif
+
 #if defined(BLUETOOTH)
 #include "bluetooth.h"
 #endif
@@ -1099,6 +1105,14 @@ union ReusableBuffer
 
   struct {
     ModuleInformation modules[NUM_MODULES];
+    struct {
+      char displayname[RADIO_TOOL_NAME_MAXLEN + 1];
+      char filename[SD_SCREEN_FILE_LENGTH + 1];
+      bool (* exec)(event_t);
+      uint8_t module;
+    } lines[NUM_BODY_LINES];
+    uint16_t offset;
+    uint16_t count;
     uint8_t linesCount;
   } radioTools;
 
