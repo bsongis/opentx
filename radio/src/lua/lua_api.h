@@ -122,9 +122,13 @@ struct ScriptInputsOutputs {
   uint8_t outputsCount;
   ScriptOutput outputs[MAX_SCRIPT_OUTPUTS];
 };
-#define INTERPRETER_RUNNING_STANDALONE_SCRIPT 1
-#define INTERPRETER_RELOAD_PERMANENT_SCRIPTS  2
-#define INTERPRETER_PANIC                     255
+enum InterpreterState {
+  INTERPRETER_RUNNING,
+  INTERPRETER_START_RUNNING,
+  INTERPRETER_LOADING,
+  INTERPRETER_RELOAD_PERMANENT_SCRIPTS,
+  INTERPRETER_PANIC = 255
+};
 extern uint8_t luaState;
 extern uint8_t luaScriptsCount;
 extern ScriptInternalData standaloneScript;
