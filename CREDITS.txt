@@ -1,6 +1,7 @@
 [Main developers]
 Bertrand Songis (bsongis)
 André Bernet (kilrah)
+JC D. (3djc)
 Michael Blandford
 Damjan Adamic (projectkk2glider)
 Franck Aguerre (jivarofad)
@@ -9,6 +10,7 @@ Martin Hotař (mhotar)
 Maxim (Max) Paperno (mpaperno)
 Arne Schwabe (schwabe)
 Daniel Gorbea (dgatf)
+Neil Horne (elecpower)
 
 [Translators]
 [fr] Sebastien Charpentier (LapinFou)
@@ -2031,3 +2033,25 @@ Hubert Huber
 David Blum
 Noam Kfir
 Mats gårdstad friberg
+Jesper Frickmann
+Alan Bunker
+Emanuel Kircher
+Barry Andersen
+Gabriel Formanek
+Timothy Justiniano
+Kelvin Garcia Urbina
+Jan Lau
+Choon Wei Jonathan Tan
+Daniel Navas
+Ray Moss
+Markus Frielingsdorf
+Michael Hirschauer
+Jesse Frey
+Philipp Koch
+Robert Rubio
+Dennis G Miller
+Leonardo Garcia Osuna
+Antonio Carrasco Pastor
+Musa Pinar
+Jens Moder
+Josef de Beer
