@@ -142,7 +142,7 @@ void checkLuaMemoryUsage();
 void luaExec(const char * filename);
 void luaDoGc(lua_State * L, bool full);
 void luaError(lua_State * L, uint8_t error, bool acknowledge=true);
-RUuint32_t luaGetMemUsed(lua_State * L);
+uint32_t luaGetMemUsed(lua_State * L);
 void luaGetValueAndPush(lua_State * L, int src);
 
 #define luaGetCpuUsed(idx) scriptInternalData[idx].instructions
