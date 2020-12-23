@@ -264,7 +264,7 @@ void guiMain(event_t evt)
 
   // run Lua scripts that don't use LCD (to use CPU time while LCD DMA is running)
   DEBUG_TIMER_START(debugTimerLuaBg);
-  luaTask(0, RUN_MIX_SCRIPT | RUN_FUNC_SCRIPT | RUN_TELEM_BG_SCRIPT, false);
+  luaTask(0, false);
   DEBUG_TIMER_STOP(debugTimerLuaBg);
   // wait for LCD DMA to finish before continuing, because code from this point
   // is allowed to change the contents of LCD buffer
@@ -279,10 +279,7 @@ void guiMain(event_t evt)
   // run Lua scripts that use LCD
 
   DEBUG_TIMER_START(debugTimerLuaFg);
-  refreshNeeded = luaTask(evt, RUN_STNDAL_SCRIPT, true);
-  if (!refreshNeeded) {
-    refreshNeeded = luaTask(evt, RUN_TELEM_FG_SCRIPT, true);
-  }
+  refreshNeeded = luaTask(evt, true);
   DEBUG_TIMER_STOP(debugTimerLuaFg);
 
   t0 = get_tmr10ms() - t0;
@@ -380,10 +377,7 @@ void handleGui(event_t event) {
   // else if Lua telemetry view, run it and don't clear the screen
   // else clear scren and show normal menus
 #if defined(LUA)
-  if (luaTask(event, RUN_STNDAL_SCRIPT, true)) {
-    // standalone script is active
-  }
-  else if (luaTask(event, RUN_TELEM_FG_SCRIPT, true)) {
+  if (luaTask(event, true) && scriptInternalData[0].reference != SCRIPT_STANDALONE) {
     // the telemetry screen is active
     menuHandlers[menuLevel](event);
   }
@@ -409,7 +403,7 @@ void guiMain(event_t evt)
   }
 
   // run Lua scripts that don't use LCD (to use CPU time while LCD DMA is running)
-  luaTask(0, RUN_MIX_SCRIPT | RUN_FUNC_SCRIPT | RUN_TELEM_BG_SCRIPT, false);
+  luaTask(0, false);
 
   t0 = get_tmr10ms() - t0;
   if (t0 > maxLuaDuration) {

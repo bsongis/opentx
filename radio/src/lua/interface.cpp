@@ -34,10 +34,10 @@ extern "C" {
 
 #define PERMANENT_SCRIPTS_MAX_INSTRUCTIONS 100
 #define LUA_WARNING_INFO_LEN                64
-# define LUA_TASK_PERIOD_TICKS               5   // 50 ms
+#define LUA_TASK_PERIOD_TICKS                5   // 50 ms
 
 // The main thread - lsScripts is now a coroutine
-luaState * L = nullptr;
+lua_State * L = nullptr;
 lua_State *lsScripts = nullptr;
 uint8_t luaState = 0;
 uint8_t luaScriptsCount = 0;
@@ -531,8 +531,8 @@ static bool luaLoad(const char * filename, ScriptInternalData & sid)
 
 static bool luaLoadMixScript(uint8_t ref)
 {
-  uint8_t index = ref - SCRIPT_MIX_FIRST;
-  ScriptData & sd = g_model.scriptsData[index];
+  uint8_t idx = ref - SCRIPT_MIX_FIRST;
+  ScriptData & sd = g_model.scriptsData[idx];
 
   if (ZEXIST(sd.file)) {
     ScriptInternalData & sid = scriptInternalData[luaScriptsCount++];
@@ -550,16 +550,16 @@ static bool luaLoadMixScript(uint8_t ref)
 
 static bool luaLoadFunctionScript(uint8_t ref)
 {
-  uint8_t index;
+  uint8_t idx;
   CustomFunctionData * fn;
 
   if (ref < SCRIPT_GFUNC_FIRST) {
-    index = ref - SCRIPT_GFUNC_FIRST;
-    fn = &g_model.customFn[index];
+    idx = ref - SCRIPT_GFUNC_FIRST;
+    fn = &g_model.customFn[idx];
   }
   else if (!g_model.noGlobalFunctions) {
-    index = ref - SCRIPT_FUNC_FIRST;
-    fn = &g_eeGeneral.customFn[index];
+    idx = ref - SCRIPT_FUNC_FIRST;
+    fn = &g_eeGeneral.customFn[idx];
   }
   else
     return false;
@@ -587,11 +587,11 @@ static bool luaLoadFunctionScript(uint8_t ref)
 #if defined(PCBTARANIS)
 static bool luaLoadTelemetryScript(uint8_t ref)
 {
-  uint8_t index = ref - SCRIPT_TELEMETRY_FIRST;
-  TelemetryScreenType screenType = TELEMETRY_SCREEN_TYPE(index);
+  uint8_t idx = ref - SCRIPT_TELEMETRY_FIRST;
+  TelemetryScreenType screenType = TELEMETRY_SCREEN_TYPE(idx);
 
   if (screenType == TELEMETRY_SCREEN_TYPE_SCRIPT) {
-    TelemetryScriptData & script = g_model.screens[index].script;
+    TelemetryScriptData & script = g_model.screens[idx].script;
     
     if (ZEXIST(script.file)) {
       if (luaScriptsCount < MAX_SCRIPTS) {
@@ -615,11 +615,11 @@ static bool luaLoadTelemetryScript(uint8_t ref)
 }
 #endif
 
-uint8_t isTelemetryScriptAvailable(uint8_t index)
+uint8_t isTelemetryScriptAvailable(uint8_t idx)
 {
   for (int i=0; i<luaScriptsCount; i++) {
     ScriptInternalData & sid = scriptInternalData[i];
-    if (sid.reference == SCRIPT_TELEMETRY_FIRST+index) {
+    if (sid.reference == SCRIPT_TELEMETRY_FIRST+idx) {
       return sid.state;
     }
   }
@@ -627,21 +627,21 @@ uint8_t isTelemetryScriptAvailable(uint8_t index)
 }
 
 // Get the name of a script for error reporting etc.
-static char * getScriptName(uint8_t index)
+static char * getScriptName(uint8_t idx)
 {
-  int reference = scriptInternalData[index].reference;
+  int ref = scriptInternalData[idx].reference;
  
-  if (reference <= SCRIPT_MIX_LAST) {
-    return & g_model.scriptsData[reference - SCRIPT_MIX_FIRST].file;
+  if (ref <= SCRIPT_MIX_LAST) {
+    return & g_model.scriptsData[ref - SCRIPT_MIX_FIRST].file;
   }
-  else if (reference <= SCRIPT_FUNC_LAST) {
-    return & g_eeGeneral.customFn[reference - SCRIPT_FUNC_FIRST].name;
+  else if (ref <= SCRIPT_FUNC_LAST) {
+    return & g_eeGeneral.customFn[ref - SCRIPT_FUNC_FIRST].name;
   }
-  else if (sid.reference <= SCRIPT_GFUNC_LAST) {
-    return & g_eeGeneral.customFn[reference - SCRIPT_GFUNC_FIRST].name;
+  else if (sid.ref <= SCRIPT_GFUNC_LAST) {
+    return & g_eeGeneral.customFn[ref - SCRIPT_GFUNC_FIRST].name;
   }
-  else if (sid.reference <= SCRIPT_TELEMETRY_LAST) {
-    return & g_model.screens[reference - SCRIPT_TELEMETRY_FIRST].script.file;
+  else if (sid.ref <= SCRIPT_TELEMETRY_LAST) {
+    return & g_model.screens[ref - SCRIPT_TELEMETRY_FIRST].script.file;
   }
   else {
     return "standalone";
@@ -670,7 +670,7 @@ static int luaRegisterFunction(char * key)
 static void luaLoadScripts(bool init, const char * filename = nullptr)
 {
   // Static variables for keeping state when Lua is preempted
-  static uint8_t reference;
+  static uint8_t ref;
   static int initFunction;
 
   if (init) {
@@ -683,10 +683,10 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     
     // Initialize loop over references
     if (filename) {
-      reference = SCRIPT_STANDALONE;
+      ref = SCRIPT_STANDALONE;
     }
     else {
-      reference = SCRIPT_MIX_FIRST;
+      ref = SCRIPT_MIX_FIRST;
     }
   }
   
@@ -697,14 +697,14 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     
     // If Lua is not yielded, then find the next script to load
     if (luaStatus == LUA_OK) {
-      if (reference <= SCRIPT_MIX_LAST) {
-        if (luaLoadMixScript(reference)) continue; // If error then skip the rest of the loop
+      if (ref <= SCRIPT_MIX_LAST) {
+        if (luaLoadMixScript(ref)) continue; // If error then skip the rest of the loop
       }
-      else if (reference <= SCRIPT_GFUNC_LAST) {
-        if (luaLoadFunctionScript(reference)) continue;
+      else if (ref <= SCRIPT_GFUNC_LAST) {
+        if (luaLoadFunctionScript(ref)) continue;
       }
-      else if (reference <= SCRIPT_TELEMETRY_LAST) {
-        if (luaLoadTelemetryScript(reference)) continue;
+      else if (ref <= SCRIPT_TELEMETRY_LAST) {
+        if (luaLoadTelemetryScript(ref)) continue;
       }
       else {
         // Standalone script
@@ -720,8 +720,8 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     // Skip the rest of the loop if we did not get a new script
     if (countBefore == luaScriptsCount) continue;
     
-    int index = luaScriptsCount - 1;
-    ScriptInternalData & sid = scriptInternalData[index];
+    int idx = luaScriptsCount - 1;
+    ScriptInternalData & sid = scriptInternalData[idx];
       
     // 1. run chunk() 2. run init(), if available:
     do {
@@ -749,12 +749,12 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
             sid.background = luaRegisterFunction("background");
             initFunction = luaRegisterFunction("init");
             if (sid.run == LUA_NOREF) {
-              TRACE_ERROR("luaLoadScripts(%s): Error: No run function.", getScriptName(index));
+              TRACE_ERROR("luaLoadScripts(%s): Error: No run function.", getScriptName(idx));
               sid.state = SCRIPT_SYNTAX_ERROR;
             }
             // Get input/output tables for mixer scripts              
-            if (reference <= SCRIPT_MIX_LAST) {
-              ScriptInputsOutputs * sio = & scriptInputsOutputs[index];
+            if (ref <= SCRIPT_MIX_LAST) {
+              ScriptInputsOutputs * sio = & scriptInputsOutputs[idx];
               lua_getfield(lsScripts, -1, "input");
               luaGetInputs(lsScripts, *sio);
               lua_pop(lsScripts, 1);
@@ -764,7 +764,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
             }
           }
           else {
-            TRACE_ERROR("luaLoadScripts(%s): Error: The script did not return a table.", getScriptName(index));
+            TRACE_ERROR("luaLoadScripts(%s): Error: The script did not return a table.", getScriptName(idx));
             sid.state = SCRIPT_SYNTAX_ERROR;
           }
           
@@ -780,10 +780,10 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       else {
         // Error
         if (initFunction != LUA_NOREF) {
-          TRACE_ERROR("luaLoadScripts(%s): Error in init(): %s.", getScriptName(index), lua_tostring(lsScripts, -1));
+          TRACE_ERROR("luaLoadScripts(%s): Error in init(): %s.", getScriptName(idx), lua_tostring(lsScripts, -1));
         }
         else {
-          TRACE_ERROR("luaLoadScripts(%s): Error: %s.", getScriptName(index), lua_tostring(lsScripts, -1));
+          TRACE_ERROR("luaLoadScripts(%s): Error: %s.", getScriptName(idx), lua_tostring(lsScripts, -1));
         }
         sid.state = SCRIPT_SYNTAX_ERROR;
         
@@ -796,7 +796,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       
     } while(initFunction != LUA_NOREF);  
     
-  } while(++reference < SCRIPT_STANDALONE);
+  } while(++ref < SCRIPT_STANDALONE);
   
   // Loading has finished - start running scripts
   luaState = INTERPRETER_START_RUNNING;
@@ -877,16 +877,19 @@ void luaExec(const char * filename)
 
 static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
 {
-  static uint8_t index;
-  
-  if (init) index = 0;
+  static uint8_t idx;
+  if (init) idx = 0;
   if (allowLcdUsage != luaLcdAllowed) return false;
+  bool scriptWasRun = false;
   
+  // Run GC at the start of every cycle
+  if (!allowLcdUsage) lua_gc(lsScripts, LUA_GCCOLLECT, 0);
+
   do {
-    ScriptInternalData & sid = scriptInternalData[index];
+    ScriptInternalData & sid = scriptInternalData[idx];
     if (sid.state != SCRIPT_OK) continue;
     
-    uint8_t reference = sid.reference;
+    uint8_t ref = sid.reference;
     int inputsCount = 0;
     int luaStatus = lua_status(lsScripts);
 
@@ -894,15 +897,12 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
       // Not preempted - next script
       lua_settop(lsScripts, 0);
       
-      // Run GC at the start of every cycle
-      if (index == 0 && !allowLcdUsage) lua_gc(lsScripts, LUA_GCCOLLECT, 0);
-
       // Find the right function and arguments...
       if (allowLcdUsage) {
 #if defined(PCBTARANIS)
-        if ((menuHandlers[0] == menuViewTelemetry && reference == SCRIPT_TELEMETRY_FIRST + s_frsky_view) || reference == SCRIPT_STANDALONE) {
+        if ((menuHandlers[0] == menuViewTelemetry && ref == SCRIPT_TELEMETRY_FIRST + s_frsky_view) || ref == SCRIPT_STANDALONE) {
 #else
-        if (reference == SCRIPT_STANDALONE) {
+        if (ref == SCRIPT_STANDALONE) {
 #endif
           lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.run);
           lua_pushunsigned(lsScripts, evt);
@@ -912,11 +912,11 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
           continue;
       }
       else {
-        if (reference <= SCRIPT_MIX_LAST) {
+        if (ref <= SCRIPT_MIX_LAST) {
           lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.run);
           
-          ScriptData & sd = g_model.scriptsData[reference - SCRIPT_MIX_FIRST];
-          ScriptInputsOutputs * sio = & scriptInputsOutputs[reference - SCRIPT_MIX_FIRST];
+          ScriptData & sd = g_model.scriptsData[ref - SCRIPT_MIX_FIRST];
+          ScriptInputsOutputs * sio = & scriptInputsOutputs[ref - SCRIPT_MIX_FIRST];
           inputsCount = sio -> inputsCount;
           
           for (int j = 0; j < inputsCount; j++) {
@@ -926,13 +926,13 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
               lua_pushinteger(lsScripts, sd.inputs[j].value + sio -> inputs[j].def);
           }
         }
-        else if (reference <= SCRIPT_GFUNC_LAST) {
+        else if (ref <= SCRIPT_GFUNC_LAST) {
           CustomFunctionData & fn;
           
-          if (reference <= SCRIPT_FUNC_LAST)
-            fn = g_model.customFn[reference - SCRIPT_FUNC_FIRST];
+          if (ref <= SCRIPT_FUNC_LAST)
+            fn = g_model.customFn[ref - SCRIPT_FUNC_FIRST];
           else
-            fn = g_eeGeneral.customFn[reference - SCRIPT_GFUNC_FIRST];
+            fn = g_eeGeneral.customFn[ref - SCRIPT_GFUNC_FIRST];
           
           if (getSwitch(fn.swtch)) {
             lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.run);
@@ -942,7 +942,7 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
             lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.background);
           }
         }
-        else if (reference <= SCRIPT_TELEMETRY_LAST) {
+        else if (ref <= SCRIPT_TELEMETRY_LAST) {
           if (sid.background == LUA_NOREF) continue;
           lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.background);
         } else continue;
@@ -958,20 +958,22 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
     }
     else if (luaStatus == LUA_OK) {
       // Coroutine returned
-      if (reference <= SCRIPT_MIX_LAST) {
-        ScriptInputsOutputs * sio = & scriptInputsOutputs[reference - SCRIPT_MIX_FIRST];
+      scriptWasRun = true;
+      
+      if (ref <= SCRIPT_MIX_LAST) {
+        ScriptInputsOutputs * sio = & scriptInputsOutputs[ref - SCRIPT_MIX_FIRST];
         lua_settop(lsScripts, sio -> outputsCount);
 
         for (int j = sio -> outputsCount - 1; j >= 0; j--) {
           if (!lua_isnumber(lsScripts, -1)) {
-            TRACE_ERROR("Script %s: Error: did not return a number", getScriptName(index));
+            TRACE_ERROR("Script %s: Error: did not return a number", getScriptName(idx));
             sid.state = SCRIPT_SYNTAX_ERROR;
             break;
           }
           sio -> outputs[j].value = lua_tointeger(lsScripts, -1);
           lua_pop(lsScripts, 1);
         }
-      } else if (reference == SCRIPT_STANDALONE) {
+      } else if (ref == SCRIPT_STANDALONE) {
         lua_settop(lsScripts, 1);
         if (lua_isnumber(lsScripts, -1)) {
           int scriptResult = lua_tointeger(lsScripts, -1);
@@ -1010,7 +1012,9 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
     }
     else {
       // Error
-      TRACE_ERROR("Script %s: Error: %s", getScriptName(index), lua_tostring(lsScripts, -1));
+      scriptWasRun = true;
+      
+      TRACE_ERROR("Script %s: Error: %s", getScriptName(idx), lua_tostring(lsScripts, -1));
       sid.state = SCRIPT_SYNTAX_ERROR;
       
       // Replace the dead coroutine with a new one
@@ -1022,22 +1026,23 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
       luaFree(lsScripts, sid);
     }
     
-  } while (++index < luaScriptsCount);
+  } while (++idx < luaScriptsCount);
   
   // Toggle between background and interactive
   luaLcdAllowed = !luaLcdAllowed
-  index = 0;
-  return true;
+  idx = 0;
+  return scriptWasRun;
 } //resumeLua(...)
 
-// Scriptype is redundant as it is determined by allowLcdUsage
-bool luaTask(event_t evt, uint8_t scriptType, bool allowLcdUsage)
+ool luaTask(event_t evt, bool allowLcdUsage)
 {
   // Since we may not run FG every time, keep the first non-zero event and discard the following
   static event_t firstEvt;
   if (firstEvt == 0) firstEvt = evt;
-  
+  // For preemption
   if (!allowLcdUsage) luaCycleStart = get_tmr10ms();
+  // Trying to replace CPU usage measure
+  instructionsPercent = 100 * maxLuaDuration / LUA_TASK_PERIOD_TICKS;
 
   switch (luaState) {
     case INTERPRETER_PANIC:
