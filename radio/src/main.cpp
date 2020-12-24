@@ -373,16 +373,17 @@ void guiMain(event_t evt)
 }
 #elif defined(GUI)
 void handleGui(event_t event) {
-  // if Lua standalone, run it and don't clear the screen (Lua will do it)
-  // else if Lua telemetry view, run it and don't clear the screen
-  // else clear scren and show normal menus
 #if defined(LUA)
-  if (luaTask(event, true) && scriptInternalData[0].reference != SCRIPT_STANDALONE) {
-    // the telemetry screen is active
-    menuHandlers[menuLevel](event);
+  if (luaTask(event, true) {
+    if (scriptInternalData[0].reference != SCRIPT_STANDALONE) {
+      // The telemetry screen is active - call menu handlers
+      menuHandlers[menuLevel](event);
+    }
+    // Else Lua standalone is running - do nothing more
   }
   else
 #endif
+  // No foreground Lua script is running - clear the screen show normal menu
   {
     lcdClear();
     menuHandlers[menuLevel](event);
