@@ -674,11 +674,10 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
   static int initFunction;
 
   if (init) {
-    // Initialize everything
     luaInit();
     if (luaState == INTERPRETER_PANIC) return;
+    
     luaLcdAllowed = false;
-    luaState = INTERPRETER_LOADING;
     initFunction = LUA_NOREF;
     
     // Initialize loop over references
@@ -737,8 +736,8 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
         if (initFunction != LUA_NOREF) {
           // init() returned - clean up
           luaL_unref(lsScripts, LUA_REGISTRYINDEX, initFunction);
-          initFunction = LUA_NOREF;
           lua_settop(lsScripts, 0);
+          initFunction = LUA_NOREF;
         }
         else {
           // chunk() returned
@@ -749,7 +748,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
             sid.background = luaRegisterFunction("background");
             initFunction = luaRegisterFunction("init");
             if (sid.run == LUA_NOREF) {
-              TRACE_ERROR("luaLoadScripts(%s): No run function.", getScriptName(idx));
+              TRACE_ERROR("luaLoadScripts(%s): No run function", getScriptName(idx));
               sid.state = SCRIPT_SYNTAX_ERROR;
             }
             // Get input/output tables for mixer scripts              
@@ -881,12 +880,8 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
   bool scriptWasRun = false;
   
   if (allowLcdUsage != luaLcdAllowed) return scriptWasRun;
-
-  if (init) {
-    idx = 0;
-    luaState = INTERPRETER_RUNNING;
-  }
-    
+  if (init) idx = 0;
+  
   // Run GC at the start of every cycle
   if (!allowLcdUsage) luaDoGc(lsScripts, false);
 
@@ -1034,14 +1029,19 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
   // Toggle between background and interactive
   luaLcdAllowed = !luaLcdAllowed
   idx = 0;
+  
   return scriptWasRun;
 } //resumeLua(...)
 
-// Since we may not run FG every time, keep the first two events
+// Since we may not run FG every time, keep the first two events in a buffer
 static event_t events[2] = {0, 0};
 
 bool luaTask(event_t evt, bool allowLcdUsage)
 {
+  bool init = false;
+  bool scriptWasRun = false;
+  
+  // Add event to buffer
   if (evt != 0) {
     if (events[0] == 0)
       events[0] = evt;
@@ -1051,14 +1051,17 @@ bool luaTask(event_t evt, bool allowLcdUsage)
   
   // For preemption
   if (!allowLcdUsage) luaCycleStart = get_tmr10ms();
+  
   // Trying to replace CPU usage measure
   instructionsPercent = 100 * maxLuaDuration / LUA_TASK_PERIOD_TICKS;
 
   switch (luaState) {
     case INTERPRETER_RELOAD_PERMANENT_SCRIPTS:
+      init = true;
+      luaState = INTERPRETER_LOADING;
     case INTERPRETER_LOADING:
       PROTECT_LUA() {
-        luaLoadScripts(luaState == INTERPRETER_RELOAD_PERMANENT_SCRIPTS);
+        luaLoadScripts(init);
         events[0] = 0;
         events[1] = 0;
       }
@@ -1066,23 +1069,24 @@ bool luaTask(event_t evt, bool allowLcdUsage)
         luaDisable();
       }
       UNPROTECT_LUA();
-      return false;
+      break;
     
-    case INTERPRETER_RUNNING:
     case INTERPRETER_START_RUNNING:
+      init = true;
+      luaState = INTERPRETER_RUNNING;
+    case INTERPRETER_RUNNING:
       PROTECT_LUA() {
         event_t event = events[0];
         events[0] = events[1];
         events[1] = 0;
-        return resumeLua(luaState == INTERPRETER_START_RUNNING, event, allowLcdUsage);
+        scriptWasRun = resumeLua(init, event, allowLcdUsage);
       }
       else {
         luaDisable();
-        return false;
       }
       UNPROTECT_LUA();
   }
-  return false;
+  return scriptWasRun;
 }
 
 void checkLuaMemoryUsage()
