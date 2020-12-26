@@ -372,27 +372,28 @@ void guiMain(event_t evt)
   }
 }
 #elif defined(GUI)
-void handleGui(event_t event) {
+bool handleGui(event_t event) {
+  bool refreshNeeded;
 #if defined(LUA)
-  if (luaTask(event, true) {
-    if (scriptInternalData[0].reference != SCRIPT_STANDALONE) {
-      // The telemetry screen is active - call menu handlers
+  refreshNeeded = luaTask(event, true);
+  if (menuHandlers[menuLevel] == menuViewTelemetry && TELEMETRY_SCREEN_TYPE(s_frsky_view) == TELEMETRY_SCREEN_TYPE_SCRIPT) {
       menuHandlers[menuLevel](event);
-    }
-    // Else Lua standalone is running - do nothing more
   }
-  else
+  else if (scriptInternalData[0].reference != SCRIPT_STANDALONE)
 #endif
   // No foreground Lua script is running - clear the screen show normal menu
   {
     lcdClear();
     menuHandlers[menuLevel](event);
     drawStatusLine();
+    refreshNeeded = true;
   }
+  return refreshNeeded;
 }
 
 void guiMain(event_t evt)
 {
+  bool refreshNeeded = menuEvent || warningText || (popupMenuItemsCount > 0);
 #if defined(LUA)
   // TODO better lua stopwatch
   uint32_t t0 = get_tmr10ms();
@@ -428,10 +429,10 @@ void guiMain(event_t evt)
   }
 
   if (isEventCaughtByPopup()) {
-    handleGui(0);
+    refreshNeeded |= handleGui(0);
   }
   else {
-    handleGui(evt);
+    refreshNeeded |= handleGui(evt);
     evt = 0;
   }
 
@@ -451,7 +452,7 @@ void guiMain(event_t evt)
     }
   }
 
-  lcdRefresh();
+  if (refreshNeeded) lcdRefresh();
 
   if (mainRequestFlags & (1u << REQUEST_SCREENSHOT)) {
     writeScreenshot();

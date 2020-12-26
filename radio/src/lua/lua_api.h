@@ -105,7 +105,8 @@ enum ScriptReference {
   SCRIPT_GFUNC_FIRST,
   SCRIPT_GFUNC_LAST=SCRIPT_GFUNC_FIRST+MAX_SPECIAL_FUNCTIONS-1,  // global functions
   SCRIPT_TELEMETRY_FIRST,
-  SCRIPT_TELEMETRY_LAST=SCRIPT_TELEMETRY_FIRST+MAX_SCRIPTS, // telem0 and telem1 .. telem7
+  SCRIPT_TELEMETRY_LAST=SCRIPT_TELEMETRY_FIRST+MAX_SCRIPTS,      // telem0 and telem1 .. telem7
+  SCRIPT_STANDALONE                                              // Standalone script
 };
 
 struct ScriptInternalData {
@@ -172,7 +173,7 @@ extern uint16_t maxLuaDuration;
 extern uint8_t instructionsPercent;
 
 #if defined(KEYS_GPIO_REG_PAGE)
-  #define IS_MASKABLE(key) ((key) != KEY_EXIT && (key) != KEY_ENTER && ((luaState == INTERPRETER_RUNNING_STANDALONE_SCRIPT) || (key) != KEY_PAGE))
+  #define IS_MASKABLE(key) ((key) != KEY_EXIT && (key) != KEY_ENTER && ((scriptInternalData[0].reference ==  SCRIPT_STANDALONE) || (key) != KEY_PAGE))
 #else
   #define IS_MASKABLE(key) ((key) != KEY_EXIT && (key) != KEY_ENTER)
 #endif
