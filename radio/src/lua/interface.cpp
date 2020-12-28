@@ -36,6 +36,8 @@ extern "C" {
 #define LUA_WARNING_INFO_LEN                64
 #define LUA_TASK_PERIOD_TICKS                5   // 50 ms
 
+// Since we may not run FG every time, keep the first two events in a buffer
+event_t events[2] = {0, 0};
 // The main thread - lsScripts is now a coroutine
 lua_State * L = nullptr;
 lua_State *lsScripts = nullptr;
@@ -802,7 +804,6 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       }
       else if (luaStatus == LUA_OK) {
         // Coroutine returned
-        luaLcdAllowed = false;
         if (initFunction != LUA_NOREF) {
           // init() returned - clean up
           luaL_unref(lsScripts, LUA_REGISTRYINDEX, initFunction);
@@ -812,6 +813,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
         else {
           // chunk() returned
           lua_settop(lsScripts, 1); // Only one return value, please
+          
           if (lua_istable(lsScripts, -1)) {
             // Register functions from the table
             sid.run = luaRegisterFunction("run");
@@ -850,7 +852,6 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       else {
         // Error
         sid.state = SCRIPT_SYNTAX_ERROR;
-        luaLcdAllowed = false;
         
         if (initFunction != LUA_NOREF)
           TRACE_ERROR("luaLoadScripts(%s): init function: %s\n", getScriptName(idx), lua_tostring(lsScripts, -1));
@@ -888,9 +889,10 @@ void luaExec(const char * filename)
   luaLoadScripts(true, filename);
 }
 
-static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
+static bool resumeLua(bool init, bool allowLcdUsage)
 {
   static uint8_t idx;
+  static event_t evt = 0;
   if (init) idx = 0;
 
   bool scriptWasRun = false;
@@ -924,6 +926,11 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
 #else
         if (ref == SCRIPT_STANDALONE) {
 #endif
+          // Pull a new event from the buffer
+          evt = events[0];
+          events[0] = events[1];
+          events[1] = 0;
+          
           lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.run);
           lua_pushunsigned(lsScripts, evt);
           inputsCount = 1;
@@ -1075,9 +1082,6 @@ static bool resumeLua(bool init, event_t evt, bool allowLcdUsage)
   return scriptWasRun;
 } //resumeLua(...)
 
-// Since we may not run FG every time, keep the first two events in a buffer
-static event_t events[2] = {0, 0};
-
 bool luaTask(event_t evt, bool allowLcdUsage)
 {
   bool init = false;
@@ -1116,10 +1120,7 @@ bool luaTask(event_t evt, bool allowLcdUsage)
     
     case INTERPRETER_RUNNING:
       PROTECT_LUA() {
-        event_t event = events[0];
-        events[0] = events[1];
-        events[1] = 0;
-        scriptWasRun = resumeLua(init, event, allowLcdUsage);
+        scriptWasRun = resumeLua(init, allowLcdUsage);
       }
       else luaDisable();
       UNPROTECT_LUA();
