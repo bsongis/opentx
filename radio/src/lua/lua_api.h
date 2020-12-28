@@ -94,7 +94,7 @@ enum ScriptState {
   SCRIPT_NOFILE,
   SCRIPT_SYNTAX_ERROR,
   SCRIPT_PANIC,
-  SCRIPT_KILLED
+  SCRIPT_FINISHED
 };
 
 enum ScriptReference {
