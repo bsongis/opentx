@@ -123,13 +123,9 @@ void luaHook(lua_State * L, lua_Debug *ar)
 #endif // #if defined(LUA_ALLOCATOR_TRACER)
 }
 
-void luaKillEvts(event_t event = 0)
+void luaKillEvts(event_t event)
 {
-  if (event == 0)
-    killAllEvents();
-  else
-    killEvents(event);
-  
+  killEvents(event);
   events[0] = 0;
   events[1] = 0;
 }
@@ -761,8 +757,9 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     
     luaLcdAllowed = false;
     initFunction = LUA_NOREF;
-    luaKillEvts();
-    
+    events[0] = 0;
+    events[1] = 0;
+
     // Initialize loop over references
     if (filename) {
       ref = SCRIPT_STANDALONE;
@@ -1052,7 +1049,7 @@ static bool resumeLua(bool init, bool allowLcdUsage)
         
         if (evt == EVT_KEY_LONG(KEY_EXIT)) {
           TRACE("Script force exit");
-          killEvents(evt);
+          luaKillEvts(evt);
           sid.state = SCRIPT_FINISHED;
         }
 #if defined(KEYS_GPIO_REG_MENU)
