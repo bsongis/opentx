@@ -123,6 +123,17 @@ void luaHook(lua_State * L, lua_Debug *ar)
 #endif // #if defined(LUA_ALLOCATOR_TRACER)
 }
 
+void luaKillEvts(event_t event = 0)
+{
+  if (event == 0)
+    killAllEvents();
+  else
+    killEvents(event);
+  
+  events[0] = 0;
+  events[1] = 0;
+}
+
 int luaGetInputs(lua_State * L, ScriptInputsOutputs & sid)
 {
   if (!lua_istable(L, -1))
@@ -750,6 +761,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     
     luaLcdAllowed = false;
     initFunction = LUA_NOREF;
+    luaKillEvts();
     
     // Initialize loop over references
     if (filename) {
@@ -1046,7 +1058,7 @@ static bool resumeLua(bool init, bool allowLcdUsage)
 #if defined(KEYS_GPIO_REG_MENU)
       // TODO find another key and add a #define
         else if (evt == EVT_KEY_LONG(KEY_MENU)) {
-          killEvents(evt);
+          luaKillEvts(evt);
           luaDisplayStatistics = !luaDisplayStatistics;
         }
 #endif
@@ -1106,8 +1118,6 @@ bool luaTask(event_t evt, bool allowLcdUsage)
     
     case INTERPRETER_LOADING:
       PROTECT_LUA() {
-        events[0] = 0;
-        events[1] = 0;
         luaLoadScripts(init);
       }
       else luaDisable();
