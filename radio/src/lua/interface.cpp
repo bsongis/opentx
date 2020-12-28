@@ -802,6 +802,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       }
       else if (luaStatus == LUA_OK) {
         // Coroutine returned
+        luaLcdAllowed = false;
         if (initFunction != LUA_NOREF) {
           // init() returned - clean up
           luaL_unref(lsScripts, LUA_REGISTRYINDEX, initFunction);
@@ -842,16 +843,14 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
           // If init(), push it on the stack
           if (initFunction != LUA_NOREF) {
             lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, initFunction);
-            if (ref == SCRIPT_STANDALONE)
-              luaLcdAllowed = true;
-            else
-              luaLcdAllowed = false;
+            if (ref == SCRIPT_STANDALONE) luaLcdAllowed = true;
           }
         }
       }
       else {
         // Error
         sid.state = SCRIPT_SYNTAX_ERROR;
+        luaLcdAllowed = false;
         
         if (initFunction != LUA_NOREF)
           TRACE_ERROR("luaLoadScripts(%s): init function: %s\n", getScriptName(idx), lua_tostring(lsScripts, -1));
