@@ -100,7 +100,7 @@ int custom_lua_atpanic(lua_State * L)
   return 0;
 }
 
-void luaHook(lua_State * L, lua_Debug *ar)
+static void luaHook(lua_State * L, lua_Debug *ar)
 {
   if (ar->event == LUA_HOOKCOUNT) {
     if (luaCycleStart - get_tmr10ms() >= LUA_TASK_PERIOD_TICKS) {
@@ -543,9 +543,11 @@ static const char * getScriptName(uint8_t idx)
   else if (ref <= SCRIPT_GFUNC_LAST) {
     return g_eeGeneral.customFn[ref - SCRIPT_GFUNC_FIRST].play.name;
   }
+#if defined(PCBTARANIS)
   else if (ref <= SCRIPT_TELEMETRY_LAST) {
     return g_model.screens[ref - SCRIPT_TELEMETRY_FIRST].script.file;
   }
+#endif
   else {
     return "standalone";
   }
@@ -651,12 +653,14 @@ static bool luaLoadTelemetryScript(uint8_t ref)
 
 uint8_t isTelemetryScriptAvailable(uint8_t idx)
 {
-  for (int i=0; i<luaScriptsCount; i++) {
+#if defined(PCBTARANIS)
+  for (int i = 0; i < luaScriptsCount; i++) {
     ScriptInternalData & sid = scriptInternalData[i];
-    if (sid.reference == SCRIPT_TELEMETRY_FIRST+idx) {
+    if (sid.reference == SCRIPT_TELEMETRY_FIRST + idx) {
       return sid.state;
     }
   }
+#endif
   return SCRIPT_NOFILE;
 }
 
@@ -782,9 +786,11 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
       else if (ref <= SCRIPT_GFUNC_LAST) {
         if (luaLoadFunctionScript(ref)) continue;
       }
+#if defined(PCBTARANIS)
       else if (ref <= SCRIPT_TELEMETRY_LAST) {
         if (luaLoadTelemetryScript(ref)) continue;
       }
+#endif
       else {
         // Standalone script
         ScriptInternalData & sid = scriptInternalData[luaScriptsCount++];
@@ -910,11 +916,14 @@ static bool resumeLua(bool init, bool allowLcdUsage)
   
   // Run in the right interactive mode
   if (allowLcdUsage != luaLcdAllowed) {
+#if defined(PCBTARANIS)
     if (luaLcdAllowed && scriptInternalData[0].reference != SCRIPT_STANDALONE && menuHandlers[menuLevel] != menuViewTelemetry) {
       // Telemetry screen was exited while foreground function was preempted - finish in the background
       luaLcdAllowed = false;
     }
-    else return scriptWasRun;
+    else 
+#endif
+      return scriptWasRun;
   }
   
   do {
@@ -977,10 +986,13 @@ static bool resumeLua(bool init, bool allowLcdUsage)
             lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.background);
           }
         }
+#if defined(PCBTARANIS)
         else if (ref <= SCRIPT_TELEMETRY_LAST) {
           if (sid.background == LUA_NOREF) continue;
           lua_rawgeti(lsScripts, LUA_REGISTRYINDEX, sid.background);
-        } else continue;
+        }
+#endif
+        else continue;
       }
     }
 

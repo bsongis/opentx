@@ -292,7 +292,7 @@ void guiMain(event_t evt)
 
   bool screenshotRequested = (mainRequestFlags & (1u << REQUEST_SCREENSHOT));
 
-  if (!refreshNeeded) {
+  if (scriptInternalData[0].reference != SCRIPT_STANDALONE) {
     DEBUG_TIMER_START(debugTimerMenus);
     while (true) {
       // normal GUI from menus

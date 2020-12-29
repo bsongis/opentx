@@ -105,8 +105,10 @@ enum ScriptReference {
   SCRIPT_FUNC_LAST=SCRIPT_FUNC_FIRST+MAX_SPECIAL_FUNCTIONS-1,    // model functions
   SCRIPT_GFUNC_FIRST,
   SCRIPT_GFUNC_LAST=SCRIPT_GFUNC_FIRST+MAX_SPECIAL_FUNCTIONS-1,  // global functions
+#if defined(PCBTARANIS)
   SCRIPT_TELEMETRY_FIRST,
   SCRIPT_TELEMETRY_LAST=SCRIPT_TELEMETRY_FIRST+MAX_SCRIPTS,      // telem0 and telem1 .. telem7
+#endif
   SCRIPT_STANDALONE                                              // Standalone script
 };
 
@@ -208,8 +210,6 @@ struct LuaMemTracer {
 };
 
 void * tracer_alloc(void * ud, void * ptr, size_t osize, size_t nsize);
-void luaHook(lua_State * L, lua_Debug *ar);
-
 
 #else  // defined(LUA)
 
