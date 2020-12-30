@@ -103,7 +103,7 @@ int custom_lua_atpanic(lua_State * L)
 static void luaHook(lua_State * L, lua_Debug *ar)
 {
   if (ar->event == LUA_HOOKCOUNT) {
-    if (luaCycleStart - get_tmr10ms() >= LUA_TASK_PERIOD_TICKS) {
+    if (get_tmr10ms() - luaCycleStart >= LUA_TASK_PERIOD_TICKS) {
       lua_yield(lsScripts, 0);
     }
   }
