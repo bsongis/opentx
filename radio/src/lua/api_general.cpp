@@ -1067,7 +1067,8 @@ static int luaKillEvents(lua_State * L)
   // prevent killing maskable keys (only in telemetry scripts)
   // TODO add which type of script is running before lua_resume()
   if (IS_MASKABLE(key)) {
-    luaKillEvts(key);
+    killEvents(key);
+    luaEmptyEventBuffer();
   }
   return 0;
 }

@@ -123,9 +123,8 @@ static void luaHook(lua_State * L, lua_Debug *ar)
 #endif // #if defined(LUA_ALLOCATOR_TRACER)
 }
 
-void luaKillEvts(event_t event)
+void luaEmptyEventBuffer()
 {
-  killEvents(event);
   events[0] = 0;
   events[1] = 0;
 }
@@ -196,17 +195,19 @@ int luaGetInputs(lua_State * L, ScriptInputsOutputs & sid)
   return 0;
 }
 
-int luaGetOutputs(lua_State * L, ScriptInputsOutputs & sid)
+int luaGetOutputs(lua_State * L2, ScriptInputsOutputs & sid)
 {
-  if (!lua_istable(L, -1))
+  if (!lua_istable(L2, -1))
     return -1;
 
   sid.outputsCount = 0;
-  for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1)) {
-    luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-    luaL_checktype(L, -1, LUA_TSTRING); // value is string
-    if (sid.outputsCount<MAX_SCRIPT_OUTPUTS) {
-      sid.outputs[sid.outputsCount++].name = lua_tostring(L, -1);
+  for (lua_pushnil(L2); lua_next(L2, -2); ) {
+    luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+    luaL_checktype(L2, -1, LUA_TSTRING); // value is string
+    if (sid.outputsCount < MAX_SCRIPT_OUTPUTS) {
+      lua_xmove(lsScripts, L, 1);   // To preserve the string value, move it to the main stack
+      lua_insert(L, -2);            // Keep the coroutine at the top of the main stack
+      sid.outputs[sid.outputsCount++].name = lua_tostring(L, -2);
     }
   }
 
@@ -761,8 +762,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
     
     luaLcdAllowed = false;
     initFunction = LUA_NOREF;
-    events[0] = 0;
-    events[1] = 0;
+    luaEmptyEventBuffer();
 
     // Initialize loop over references
     if (filename) {
@@ -884,7 +884,7 @@ static void luaLoadScripts(bool init, const char * filename = nullptr)
           initFunction = LUA_NOREF;
         }
         // Replace the dead coroutine with a new one
-        lua_settop(L, 0);  // Clear the main stack with the dead coroutine
+        lua_pop(L, 1);  // Pop the dead coroutine off the main stack
         lsScripts = lua_newthread(L);  // Push the new coroutine
       }
       
@@ -1061,13 +1061,15 @@ static bool resumeLua(bool init, bool allowLcdUsage)
         
         if (evt == EVT_KEY_LONG(KEY_EXIT)) {
           TRACE("Script force exit");
-          luaKillEvts(evt);
+          killEvents(evt);
+          luaEmptyEventBuffer();
           sid.state = SCRIPT_FINISHED;
         }
 #if defined(KEYS_GPIO_REG_MENU)
       // TODO find another key and add a #define
         else if (evt == EVT_KEY_LONG(KEY_MENU)) {
-          luaKillEvts(evt);
+          killEvents(evt);
+          luaEmptyEventBuffer();
           luaDisplayStatistics = !luaDisplayStatistics;
         }
 #endif
@@ -1082,7 +1084,7 @@ static bool resumeLua(bool init, bool allowLcdUsage)
         luaError(lsScripts, sid.state);
       else {
         // Replace the dead coroutine with a new one
-        lua_settop(L, 0);  // Clear the main stack with the dead coroutine
+        lua_pop(L, 1);  // Pop the dead coroutine off the main stack
         lsScripts = lua_newthread(L);  // Push the new coroutine
       }
     }

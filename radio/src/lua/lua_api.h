@@ -56,7 +56,7 @@ void luaInitThemesAndWidgets();
 #endif
 
 void luaInit();
-void luaKillEvts(event_t event);
+void luaEmptyEventBuffer();
 
 #define LUA_INIT_THEMES_AND_WIDGETS()  luaInitThemesAndWidgets()
 #define lua_registernumber(L, n, i)    (lua_pushnumber(L, (i)), lua_setglobal(L, (n)))
