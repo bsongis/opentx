@@ -209,6 +209,7 @@ int luaGetOutputs(lua_State * L2, ScriptInputsOutputs & sid)
       lua_insert(L, -2);            // Keep the coroutine at the top of the main stack
       sid.outputs[sid.outputsCount++].name = lua_tostring(L, -2);
     }
+    else lua_pop(lsScripts, 1);
   }
 
   return 0;
