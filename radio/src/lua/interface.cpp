@@ -129,31 +129,34 @@ void luaEmptyEventBuffer()
   events[1] = 0;
 }
 
-int luaGetInputs(lua_State * L, ScriptInputsOutputs & sid)
+int luaGetInputs(lua_State * L2, ScriptInputsOutputs & sid)
 {
-  if (!lua_istable(L, -1))
+  if (!lua_istable(L2, -1))
     return -1;
 
   memclear(sid.inputs, sizeof(sid.inputs));
   sid.inputsCount = 0;
-  for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1)) {
-    luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-    luaL_checktype(L, -1, LUA_TTABLE); // value is table
+  for (lua_pushnil(L2); lua_next(L2, -2); lua_pop(L2, 1)) {
+    luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+    luaL_checktype(L2, -1, LUA_TTABLE); // value is table
     if (sid.inputsCount<MAX_SCRIPT_INPUTS) {
       uint8_t field = 0;
       int type = 0;
       ScriptInput * si = &sid.inputs[sid.inputsCount];
-      for (lua_pushnil(L); lua_next(L, -2) && field<5; lua_pop(L, 1), field++) {
+      for (lua_pushnil(L2); lua_next(L2, -2) && field<5; lua_pop(L2, 1), field++) {
         switch (field) {
           case 0:
-            luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-            luaL_checktype(L, -1, LUA_TSTRING); // value is string
-            si->name = lua_tostring(L, -1);
+            luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+            luaL_checktype(L2, -1, LUA_TSTRING); // value is string
+            lua_xmove(lsScripts, L, 1);          // To preserve the string value, move it to the main stack
+            lua_pushnil(lsScripts);              // Keep the stack balanced
+            lua_insert(L, -2);                   // Keep the coroutine at the top of the main stack
+            si->name = lua_tostring(L, -2);
             break;
           case 1:
-            luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-            luaL_checktype(L, -1, LUA_TNUMBER); // value is number
-            type = lua_tointeger(L, -1);
+            luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+            luaL_checktype(L2, -1, LUA_TNUMBER); // value is number
+            type = lua_tointeger(L2, -1);
             if (type >= INPUT_TYPE_FIRST && type <= INPUT_TYPE_LAST) {
               si->type = type;
             }
@@ -166,24 +169,24 @@ int luaGetInputs(lua_State * L, ScriptInputsOutputs & sid)
             }
             break;
           case 2:
-            luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-            luaL_checktype(L, -1, LUA_TNUMBER); // value is number
+            luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+            luaL_checktype(L2, -1, LUA_TNUMBER); // value is number
             if (si->type == INPUT_TYPE_VALUE) {
-              si->min = lua_tointeger(L, -1);
+              si->min = lua_tointeger(L2, -1);
             }
             break;
           case 3:
-            luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-            luaL_checktype(L, -1, LUA_TNUMBER); // value is number
+            luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+            luaL_checktype(L2, -1, LUA_TNUMBER); // value is number
             if (si->type == INPUT_TYPE_VALUE) {
-              si->max = lua_tointeger(L, -1);
+              si->max = lua_tointeger(L2, -1);
             }
             break;
           case 4:
-            luaL_checktype(L, -2, LUA_TNUMBER); // key is number
-            luaL_checktype(L, -1, LUA_TNUMBER); // value is number
+            luaL_checktype(L2, -2, LUA_TNUMBER); // key is number
+            luaL_checktype(L2, -1, LUA_TNUMBER); // value is number
             if (si->type == INPUT_TYPE_VALUE) {
-              si->def = lua_tointeger(L, -1);
+              si->def = lua_tointeger(L2, -1);
             }
             break;
         }
