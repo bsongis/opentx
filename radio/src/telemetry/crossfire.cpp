@@ -69,9 +69,6 @@ const CrossfireSensor & getCrossfireSensor(uint8_t id, uint8_t subId)
 
 void processCrossfireTelemetryValue(uint8_t index, int32_t value)
 {
-  if (!TELEMETRY_STREAMING())
-    return;
-
   const CrossfireSensor & sensor = crossfireSensors[index];
   setTelemetryValue(PROTOCOL_TELEMETRY_CROSSFIRE, sensor.id, 0, sensor.subId, value, sensor.unit, sensor.precision);
 }
@@ -110,6 +107,7 @@ void processCrossfireTelemetryFrame()
     moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_MODELID;
   }
 
+  telemetryStreaming = TELEMETRY_TIMEOUT10ms;
   uint8_t id = telemetryRxBuffer[2];
   int32_t value;
   switch(id) {
@@ -144,11 +142,11 @@ void processCrossfireTelemetryFrame()
           if (i == RX_QUALITY_INDEX) {
             if (value) {
               telemetryData.rssi.set(value);
-              telemetryStreaming = TELEMETRY_TIMEOUT10ms;
+              modelTelemetryStreaming = TELEMETRY_TIMEOUT10ms;
             }
             else {
               telemetryData.rssi.reset();
-              telemetryStreaming = 0;
+              modelTelemetryStreaming = 0;
             }
           }
         }

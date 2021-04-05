@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _TELEMETRY_H_
-#define _TELEMETRY_H_
+#pragma once
 
 #include "frsky.h"
 #include "crossfire.h"
@@ -40,10 +39,11 @@
 #endif
 
 extern uint8_t telemetryStreaming; // >0 (true) == data is streaming in. 0 = no data detected for some time
+extern uint8_t modelTelemetryStreaming; // allows to differentiate between module telem and model telem
 
-inline bool TELEMETRY_STREAMING()
+inline bool MODEL_TELEMETRY_STREAMING()
 {
-  return telemetryStreaming > 0;
+  return modelTelemetryStreaming > 0;
 }
 
 enum TelemetryStates {
@@ -51,6 +51,7 @@ enum TelemetryStates {
   TELEMETRY_OK,
   TELEMETRY_KO
 };
+
 extern uint8_t telemetryState;
 
 constexpr uint8_t TELEMETRY_TIMEOUT10ms = 100; // 1 second
@@ -290,4 +291,3 @@ extern Fifo<uint8_t, LUA_TELEMETRY_INPUT_FIFO_SIZE> * luaInputTelemetryFifo;
 
 void processPXX2Frame(uint8_t module, const uint8_t *frame);
 
-#endif // _TELEMETRY_H_
